@@ -43,7 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md z-10 border border-slate-200">
         <div className="flex flex-col items-center mb-8">
           <img 
-            src="https://hethongthongtin.vn/wp-content/uploads/2021/08/logo-bo-giao-duc.png" 
+            src="https://edu.viettel.vn/upload/102846/20251215/LOGO_TRUONG_b0c24.png" 
             alt="Logo THCS Nguyễn Hồng Ánh" 
             className="w-16 h-16 mx-auto mb-4 object-contain drop-shadow-sm hover:scale-105 transition-transform duration-300"
           />
