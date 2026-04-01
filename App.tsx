@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import ControlsPanel from './features/seating-chart/ControlsPanel';
 import SeatingChartDisplay from './features/seating-chart/SeatingChartDisplay';
@@ -11,6 +11,7 @@ import SystemSettingsModal from './features/system-settings/SystemSettingsModal'
 import { useSystemSettings } from './hooks/useSystemSettings';
 import { useSeatingChart } from './hooks/useSeatingChart';
 import { useClasses } from './hooks/useClasses';
+import { useCurrentUserRole } from './hooks/useCurrentUserRole';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
@@ -34,18 +35,30 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'chart' | 'manager' | 'priority'>('chart');
   const [isAdminSettingsOpen, setIsAdminSettingsOpen] = useState(false);
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<'all' | number>('all');
   
   const classObj = useClasses(isLoggedIn);
   const sysSettingsObj = useSystemSettings();
   const ctx = useSeatingChart(isLoggedIn, classObj.activeClassId);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const { userRole, loadingRole } = useCurrentUserRole(isLoggedIn);
+
+  useEffect(() => {
+    if (userRole && userRole.role !== 'admin' && activeTab !== 'manager') {
+      setActiveTab('manager');
+    }
+  }, [userRole, activeTab]);
+
+  useEffect(() => {
+    setSelectedGroupFilter('all');
+  }, [classObj.activeClassId]);
 
   if (!isLoggedIn) {
     return <Login onLogin={handleLogin} />;
   }
 
-  if (classObj.loadingClasses || ctx.isLoading) {
-      return <div className="flex h-screen w-full items-center justify-center bg-slate-100 text-slate-500">Đang tải dữ liệu lớp học từ Supabase...</div>;
+  if (classObj.loadingClasses || ctx.isLoading || loadingRole) {
+      return <div className="flex h-screen w-full items-center justify-center bg-slate-100 text-slate-500">Đang tải dữ liệu và phân quyền hệ thống...</div>;
   }
 
   const renderContent = () => {
@@ -64,9 +77,9 @@ export default function App() {
     }
 
       switch (activeTab) {
-          case 'chart':
-              return (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={ctx.handleDragEnd}>
+          case 'chart': {
+              const isAdmin = userRole?.role === 'admin';
+              const chartContent = (
                     <div className="flex flex-col md:flex-row h-full">
                         <ControlsPanel
                         rows={ctx.rows} setRows={ctx.setRows}
@@ -84,6 +97,7 @@ export default function App() {
                         onApplyGrouping={() => ctx.handleApplyGrouping()}
                         arrangementMode={ctx.arrangementMode} setArrangementMode={ctx.setArrangementMode}
                         sysSettings={sysSettingsObj.settings}
+                        userRole={userRole}
                         />
                         <main className="flex-1 flex flex-col p-4 md:p-6 lg:p-8 overflow-auto">
                         <SeatingChartDisplay
@@ -93,19 +107,53 @@ export default function App() {
                             groups={ctx.groups} groupLeaders={ctx.groupLeaders}
                             onSetGroupLeader={ctx.handleSetGroupLeader}
                             arrangementMode={ctx.arrangementMode} seatsPerTable={ctx.seatsPerTable}
+                            userRole={userRole}
                         />
                         </main>
                     </div>
-                    <HelpModal isOpen={ctx.isHelpModalOpen} onClose={() => ctx.setIsHelpModalOpen(false)} />
-                </DndContext>
               );
-          case 'manager':
+
+              return (
+                  <React.Fragment>
+                      {isAdmin ? (
+                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={ctx.handleDragEnd}>
+                              {chartContent}
+                          </DndContext>
+                      ) : (
+                          chartContent
+                      )}
+                      <HelpModal isOpen={ctx.isHelpModalOpen} onClose={() => ctx.setIsHelpModalOpen(false)} />
+                  </React.Fragment>
+              );
+          }
+          case 'manager': {
+              let visibleStudents = ctx.students;
+              if (userRole?.role === 'group_leader' && userRole.group_id) {
+                  const groupIndex = userRole.group_id - 1;
+                  const groupCoords = ctx.groups[groupIndex] || [];
+                  visibleStudents = [];
+                  groupCoords.forEach(pos => {
+                      const table = ctx.seatingChart[pos.rowIndex]?.[pos.colIndex];
+                      if (table && Array.isArray(table)) visibleStudents.push(...table);
+                  });
+              } else if (selectedGroupFilter !== 'all') {
+                  const groupIndex = selectedGroupFilter;
+                  const groupCoords = ctx.groups[groupIndex] || [];
+                  visibleStudents = [];
+                  groupCoords.forEach(pos => {
+                      const table = ctx.seatingChart[pos.rowIndex]?.[pos.colIndex];
+                      if (table && Array.isArray(table)) visibleStudents.push(...table);
+                  });
+              }
+
               return (
                 <StudentManagerModal 
-                    students={ctx.students}
+                    students={visibleStudents}
                     onUpdateStudent={ctx.handleUpdateSingleStudent}
+                    userRole={userRole}
                 />
               );
+          }
           case 'priority':
               return (
                   <PriorityStudentsView students={ctx.students} />
@@ -124,6 +172,10 @@ export default function App() {
         onLogout={handleLogout}
         classObj={classObj}
         sysSettings={sysSettingsObj.settings}
+        userRole={userRole}
+        groupsCount={ctx.groups.length}
+        groupFilter={selectedGroupFilter}
+        onGroupFilterChange={setSelectedGroupFilter}
       />
       
       <div className="flex-1 overflow-hidden relative">

@@ -17,7 +17,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    // Nếu người dùng nhập "admin" (không có @), tự động fix thành email mặc định mà ta cấp
+    // Khôi phục lại domain @muongthanh.edu.vn để tương thích với tài khoản Admin cũ có sẵn
     const loginEmail = username.includes('@') ? username.trim() : `${username.trim()}@muongthanh.edu.vn`;
 
     const { error: signInError } = await supabase.auth.signInWithPassword({

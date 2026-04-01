@@ -1,12 +1,13 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Student, BehaviorRecord } from '../../types';
+import type { Student, BehaviorRecord, UserRole } from '../../types';
 import { UserIcon } from '../../components/common/icons/UserIcon';
 import { supabase } from '../../supabaseClient';
 
 interface StudentManagerProps {
   students: Student[];
   onUpdateStudent: (updatedStudent: Student) => void;
+  userRole: UserRole | null;
 }
 
 const COMMON_REASONS = {
@@ -29,10 +30,10 @@ const COMMON_REASONS = {
   ]
 };
 
-const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdateStudent }) => {
+const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdateStudent, userRole }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'info' | 'conduct' | 'summary'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'conduct' | 'summary'>(userRole?.role === 'admin' ? 'info' : 'conduct');
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Form states for behavior
@@ -96,6 +97,10 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
     const description = reason;
 
     try {
+        const initStatus = userRole?.role === 'admin' ? 'approved' 
+                         : userRole?.role === 'president' ? 'pending_teacher' 
+                         : 'pending_president';
+
         const { data: newRecord, error } = await supabase
             .from('behavior_records')
             .insert({
@@ -103,7 +108,9 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
                 type: behaviorType,
                 description: description,
                 score: finalScore,
-                timestamp: timestamp
+                timestamp: timestamp,
+                status: initStatus,
+                created_by: userRole?.id
             })
             .select()
             .single();
@@ -126,6 +133,32 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
     } catch (err) {
         console.error("Lỗi thêm hạnh kiểm:", err);
         alert("Có lỗi xảy ra khi lưu dữ liệu.");
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  const handleApproveRecord = async (recordId: string, newStatus: string) => {
+    if (!selectedStudent || isProcessing) return;
+    setIsProcessing(true);
+    try {
+        const { error } = await supabase
+            .from('behavior_records')
+            .update({ status: newStatus })
+            .eq('id', recordId);
+        
+        if (error) throw error;
+        
+        const updatedStudent = {
+            ...selectedStudent,
+            behaviorRecords: selectedStudent.behaviorRecords.map(r => 
+                r.id === recordId ? { ...r, status: newStatus as any } : r
+            )
+        };
+        onUpdateStudent(updatedStudent);
+    } catch (err) {
+        console.error("Lỗi duyệt hạnh kiểm:", err);
+        alert("Không thể thay đổi trạng thái lúc này.");
     } finally {
         setIsProcessing(false);
     }
@@ -165,9 +198,12 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
      if (!selectedStudent) return null;
      
      const records = selectedStudent.behaviorRecords || [];
+     // OFFICIAL records for long-term summary
+     const approvedRecords = records.filter(r => r.status === 'approved');
+     
      const monthsMap = new Map<string, { score: number, month: number, year: number }>();
 
-     records.forEach(r => {
+     approvedRecords.forEach(r => {
          const d = new Date(r.timestamp);
          const key = `${d.getMonth()}-${d.getFullYear()}`;
          if (!monthsMap.has(key)) {
@@ -195,8 +231,28 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
          }
      });
 
+     // Calculate current viewMonth's weekly stats
+     const weekStats = [
+        { label: 'Tuần 1 (Ngày 1-7)', score: 100 },
+        { label: 'Tuần 2 (Ngày 8-14)', score: 100 },
+        { label: 'Tuần 3 (Ngày 15-21)', score: 100 },
+        { label: 'Tuần 4 (Ngày 22+)', score: 100 },
+     ];
+     
+     approvedRecords.forEach(r => {
+         const d = new Date(r.timestamp);
+         if (d.getMonth() === viewMonth && d.getFullYear() === viewYear) {
+             const date = d.getDate();
+             if (date >= 1 && date <= 7) weekStats[0].score += r.score;
+             else if (date >= 8 && date <= 14) weekStats[1].score += r.score;
+             else if (date >= 15 && date <= 21) weekStats[2].score += r.score;
+             else weekStats[3].score += r.score;
+         }
+     });
+
      return {
          monthlyStats,
+         weekStats,
          sem1Avg: sem1Count > 0 ? (sem1Total / sem1Count).toFixed(1) : null,
          sem2Avg: sem2Count > 0 ? (sem2Total / sem2Count).toFixed(1) : null,
          yearAvg: (sem1Count + sem2Count) > 0 ? ((sem1Total + sem2Total) / (sem1Count + sem2Count)).toFixed(1) : null
@@ -247,7 +303,21 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
               ))
             ) : (
                 <div className="p-8 text-center text-slate-400 text-sm">
-                  {students.length === 0 ? "Chưa có danh sách." : "Không tìm thấy."}
+                  {students.length === 0 ? (
+                      userRole?.role === 'group_leader' 
+                      ? (
+                          <div className="flex flex-col items-center">
+                              <span className="text-red-500 font-bold mb-2">Tổ này chưa có học sinh.</span>
+                              <span>Vui lòng nhờ lớp trưởng hoặc giáo viên chia tổ trên Sơ đồ bằng cách xếp chỗ!</span>
+                              <div className="bg-slate-100 p-4 mt-4 text-xs font-mono text-left rounded w-full max-w-md">
+                                  <div>Debug Info:</div>
+                                  <div>Role: {userRole.role}</div>
+                                  <div>Group ID: {userRole.group_id}</div>
+                              </div>
+                          </div>
+                      )
+                      : "Chưa có danh sách."
+                  ) : "Không tìm thấy."}
                 </div>
             )}
           </div>
@@ -278,7 +348,7 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
               {/* Navigation Tabs */}
               <div className="flex border-b border-slate-200 px-8 bg-white flex-shrink-0">
                  {[
-                     { id: 'info', label: 'Thông tin cá nhân' },
+                     ...(userRole?.role === 'admin' ? [{ id: 'info', label: 'Thông tin cá nhân' }] : []),
                      { id: 'conduct', label: 'Sổ theo dõi (Tháng)' },
                      { id: 'summary', label: 'Tổng kết & Xếp loại' }
                  ].map(tab => (
@@ -301,7 +371,7 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
               <div className="flex-1 overflow-y-auto p-8">
                 
                 {/* TAB 1: INFO */}
-                {activeTab === 'info' && (
+                {(activeTab === 'info' && userRole?.role === 'admin') && (
                   <div className="max-w-3xl mx-auto space-y-6">
                     <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
                         <h3 className="text-lg font-bold text-slate-800 mb-6 border-b pb-2">Hồ sơ chi tiết</h3>
@@ -535,11 +605,26 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
                                                         {record.type === 'bonus' ? 'Khen' : 'Phạt'}
                                                     </span>
                                                     {record.description}
+                                                    <div className="mt-1 text-xs">
+                                                        {record.status === 'pending_president' ? (
+                                                            <span className="text-orange-500 font-medium">⏳ Tổ trưởng chấm (Chờ Lớp trưởng duyệt)</span>
+                                                        ) : record.status === 'pending_teacher' ? (
+                                                            <span className="text-blue-500 font-medium">⏳ Lớp trưởng đã duyệt (Chờ GV duyệt)</span>
+                                                        ) : (
+                                                            <span className="text-green-500 font-medium">✅ Đã duyệt</span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className={`px-6 py-4 whitespace-nowrap text-right text-base font-bold ${record.score > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                     {record.score > 0 ? '+' : ''}{record.score}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                                    {(userRole?.role === 'president' && record.status === 'pending_president') && (
+                                                        <button type="button" onClick={() => handleApproveRecord(record.id, 'pending_teacher')} className="text-blue-600 font-bold mr-3 hover:underline">Duyệt</button>
+                                                    )}
+                                                    {(userRole?.role === 'admin' && record.status !== 'approved') && (
+                                                        <button type="button" onClick={() => handleApproveRecord(record.id, 'approved')} className="text-green-600 font-bold mr-3 hover:underline">Duyệt</button>
+                                                    )}
                                                     <button type="button" onClick={() => handleDeleteRecord(record.id)} className="text-slate-400 hover:text-red-600 transition-colors font-medium">Xóa</button>
                                                 </td>
                                             </tr>
@@ -617,11 +702,48 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
                                         })
                                     ) : (
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-8 text-center text-slate-500 text-sm">Chưa có dữ liệu nào trong năm học.</td>
+                                            <td colSpan={3} className="px-6 py-8 text-center text-slate-500 text-sm">Chưa có dữ liệu chính thức nào được duyệt trong năm học.</td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Weekly Detail of Current View Month */}
+                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                            <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                                <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">Thống Kê Tuần</h3>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex gap-2 items-center bg-white rounded-lg border border-indigo-200 px-2 py-1">
+                                        <select 
+                                            value={viewMonth}
+                                            onChange={(e) => setViewMonth(Number(e.target.value))}
+                                            className="bg-transparent border-none text-sm focus:ring-0 font-medium text-indigo-900 py-1"
+                                        >
+                                            {Array.from({length: 12}, (_, i) => (
+                                                <option key={i} value={i}>Tháng {i + 1}</option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            type="number"
+                                            value={viewYear}
+                                            onChange={(e) => setViewYear(Number(e.target.value))}
+                                            className="bg-transparent border-none text-sm focus:ring-0 w-16 font-medium text-indigo-900 py-1 p-0"
+                                        />
+                                    </div>
+                                    <div className="text-xs px-2 py-1.5 bg-white text-indigo-600 font-medium rounded shadow-sm border border-indigo-200">Chỉ tính điểm đã duyệt</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-200">
+                                {summaryData.weekStats.map((week, idx) => (
+                                    <div key={idx} className="p-4 text-center">
+                                        <div className="text-xs text-slate-500 mb-1">{week.label}</div>
+                                        <div className={`text-2xl font-bold ${week.score < 100 ? 'text-red-500' : week.score > 100 ? 'text-green-500' : 'text-slate-800'}`}>
+                                            {week.score} <span className="text-sm font-normal text-slate-400">điểm</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}

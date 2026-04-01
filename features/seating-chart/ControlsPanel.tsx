@@ -1,6 +1,6 @@
 
-import React, { useRef } from 'react';
-import type { Student, GroupSettings, ArrangementMode } from '../../types';
+import React, { useRef, useState } from 'react';
+import type { ViewMode, Student, GroupSettings, ArrangementMode, SystemSettingsData, UserRole } from '../../types';
 import { RotateIcon } from '../../components/common/icons/RotateIcon';
 import { JsonIcon } from '../../components/common/icons/JsonIcon';
 import { CsvIcon } from '../../components/common/icons/CsvIcon';
@@ -9,13 +9,13 @@ import { ImportIcon } from '../../components/common/icons/ImportIcon';
 
 interface ControlsPanelProps {
   rows: number;
-  setRows: (value: number) => void;
+  setRows: (val: number) => void;
   cols: number;
-  setCols: (value: number) => void;
+  setCols: (val: number) => void;
   seatsPerTable: number;
-  setSeatsPerTable: (value: number) => void;
+  setSeatsPerTable: (val: number) => void;
   studentListInput: string;
-  setStudentListInput: (value: string) => void;
+  setStudentListInput: (val: string) => void;
   students: Student[];
   maxStudents: number;
   onUpdateStudents: () => void;
@@ -26,11 +26,12 @@ interface ControlsPanelProps {
   onExportCsv: () => void;
   onOpenHelp: () => void;
   groupSettings: GroupSettings;
-  setGroupSettings: (settings: GroupSettings) => void;
+  setGroupSettings: React.Dispatch<React.SetStateAction<GroupSettings>>;
   onApplyGrouping: () => void;
   arrangementMode: ArrangementMode;
   setArrangementMode: (mode: ArrangementMode) => void;
-  sysSettings: SystemSettingsData;
+  sysSettings: SystemSettingsData | null;
+  userRole: UserRole | null;
 }
 
 const InputField: React.FC<{ label: string; value: number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; min?: number; max?: number }> = ({ label, value, onChange, min = 1, max = 20 }) => (
@@ -47,11 +48,12 @@ const InputField: React.FC<{ label: string; value: number; onChange: (e: React.C
   </div>
 );
 
-const ActionButton: React.FC<{ onClick: () => void; className: string; children: React.ReactNode }> = ({ onClick, className, children }) => (
+const ActionButton: React.FC<{ onClick: () => void; className: string; children: React.ReactNode; disabled?: boolean }> = ({ onClick, className, children, disabled }) => (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-white font-semibold py-2 px-3 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white transition-colors duration-200 flex items-center justify-center gap-2 text-sm ${className}`}
+      disabled={disabled}
+      className={`w-full text-white font-semibold py-2 px-3 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white transition-colors duration-200 flex items-center justify-center gap-2 text-sm ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       {children}
     </button>
@@ -64,8 +66,12 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   onUpdateStudents, onInitialArrangement, onRotateSeats,
   onExportJson, onImportJson, onExportCsv, onOpenHelp,
   groupSettings, setGroupSettings, onApplyGrouping,
-  arrangementMode, setArrangementMode, sysSettings
+  arrangementMode,
+  setArrangementMode,
+  sysSettings,
+  userRole
 }) => {
+  const [activeTab, setActiveTab] = useState<'roster' | 'layout' | 'groups'>('roster');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,7 +96,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     }
   };
 
-  const handleJsonImportClick = () => {
+  const handleJsonClick = () => {
     jsonFileInputRef.current?.click();
   };
 
@@ -110,7 +116,6 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
       event.target.value = '';
     }
   };
-
 
   return (
     <aside className="w-full md:w-80 lg:w-96 bg-white p-6 flex-shrink-0 flex flex-col space-y-6 overflow-y-auto shadow-xl border-r border-slate-200 h-full">
@@ -311,12 +316,14 @@ Trần Thị B..."
         <div className="space-y-3">
             <ActionButton
               onClick={onInitialArrangement}
+              disabled={userRole?.role !== 'admin'}
               className="bg-green-600 hover:bg-green-700 focus:ring-green-500"
             >
               Sắp Xếp Ban Đầu
             </ActionButton>
             <ActionButton
               onClick={onRotateSeats}
+              disabled={userRole?.role !== 'admin'}
               className="bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
             >
               <RotateIcon />
@@ -327,7 +334,7 @@ Trần Thị B..."
              <h3 className="text-xs font-bold text-slate-500 mb-2 uppercase text-center">Lưu & Tải Trạng Thái</h3>
              <div className="grid grid-cols-2 gap-3">
                  <ActionButton
-                    onClick={handleJsonImportClick}
+                    onClick={handleJsonClick}
                     className="bg-purple-600 hover:bg-purple-700 focus:ring-purple-500"
                   >
                     <ImportIcon />

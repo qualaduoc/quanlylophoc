@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { SystemSettingsData } from '../../types';
+import { UserRoleManager } from './UserRoleManager';
 
 interface Props {
   isOpen: boolean;
@@ -10,7 +11,7 @@ interface Props {
 }
 
 export default function SystemSettingsModal({ isOpen, onClose, systemSettings, onUpdateSystemSettings }: Props) {
-  const [activeTab, setActiveTab] = useState<'brand' | 'account'>('brand');
+  const [activeTab, setActiveTab] = useState<'brand' | 'account' | 'users'>('brand');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -121,6 +122,12 @@ export default function SystemSettingsModal({ isOpen, onClose, systemSettings, o
           >
             🪪 Tài Khoản Admin
           </button>
+          <button
+            onClick={() => { setActiveTab('users'); setErrorMsg(''); setSuccessMsg(''); }}
+            className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-indigo-600 text-white shadow-md transform scale-105' : 'text-slate-600 hover:bg-slate-200'}`}
+          >
+            👥 Quản Lý Phân Quyền
+          </button>
         </div>
 
         {/* Content Area */}
@@ -130,7 +137,9 @@ export default function SystemSettingsModal({ isOpen, onClose, systemSettings, o
           </button>
 
           <h3 className="text-xl font-bold text-slate-800 mb-6">
-            {activeTab === 'brand' ? 'Thông Tin Bản Quyền Web/App' : 'Quản Lý Tài Khoản'}
+            {activeTab === 'brand' ? 'Thông Tin Bản Quyền Web/App' 
+             : activeTab === 'account' ? 'Cài Đặt Tài Khoản Admin' 
+             : 'Hệ Thống Phân Quyền'}
           </h3>
 
           {errorMsg && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium">{errorMsg}</div>}
@@ -182,7 +191,7 @@ export default function SystemSettingsModal({ isOpen, onClose, systemSettings, o
                 </button>
               </div>
             </form>
-          ) : (
+          ) : activeTab === 'account' ? (
             <form onSubmit={handleSaveAccount} className="space-y-4 flex-1">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Họ và Tên Quản Trị Viên (Hiển thị góc phải)</label>
@@ -198,7 +207,9 @@ export default function SystemSettingsModal({ isOpen, onClose, systemSettings, o
                 </button>
               </div>
             </form>
-          )}
+          ) : activeTab === 'users' ? (
+             <UserRoleManager />
+          ) : null}
         </div>
       </div>
     </div>

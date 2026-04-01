@@ -6,12 +6,25 @@ export interface ClassData {
   school_year?: string;
 }
 
+export type RoleString = 'admin' | 'president' | 'group_leader';
+
+export interface UserRole {
+  id: string;
+  username: string;
+  role: RoleString;
+  class_id: string | null;
+  group_id: number | null;
+}
+
 export interface BehaviorRecord {
   id: string;
   type: 'bonus' | 'penalty' | 'info';
   description: string;
   score: number;
   timestamp: number;
+  status?: 'pending_president' | 'pending_teacher' | 'approved';
+  created_by?: string;
+  week_number?: number;
 }
 
 export interface Student {

@@ -40,8 +40,18 @@ export const useSeatingChart = (isLoggedIn: boolean, activeClassId: string | nul
   const saveAppSettings = useCallback(async (updates: any) => {
     if (!activeClassId) return;
     try {
-        const payload: any = { class_id: activeClassId, ...updates };
-        if (appSettingsId) payload.id = appSettingsId;
+        let finalId = appSettingsId;
+        if (!finalId) {
+            // Check if it exists but wasn't synced to state yet
+            const { data: existing } = await supabase.from('app_settings').select('id').eq('class_id', activeClassId).order('id', { ascending: false }).limit(1).maybeSingle();
+            if (existing?.id) {
+                finalId = existing.id;
+            } else {
+                finalId = Math.floor(Math.random() * 2000000000); // Missing constraint fallback
+            }
+        }
+
+        const payload: any = { class_id: activeClassId, ...updates, id: finalId };
         
         const { data, error } = await supabase
             .from('app_settings')
@@ -69,6 +79,8 @@ export const useSeatingChart = (isLoggedIn: boolean, activeClassId: string | nul
                 .from('app_settings')
                 .select('*')
                 .eq('class_id', activeClassId)
+                .order('id', { ascending: false })
+                .limit(1)
                 .maybeSingle();
             
             if (settings && !settingsError) {
@@ -101,43 +113,98 @@ export const useSeatingChart = (isLoggedIn: boolean, activeClassId: string | nul
                 .eq('class_id', activeClassId)
                 .order('full_name');
 
-            if (studentsData && !studentsError) {
-                const mappedStudents: Student[] = studentsData.map((s: any) => ({
-                    id: s.id,
-                    fullName: s.full_name,
-                    shortName: s.short_name || '',
-                    currentSeatAssignedTimestamp: s.current_seat_assigned_timestamp ? Number(s.current_seat_assigned_timestamp) : null,
-                    parentPhone: s.parent_phone,
-                    address: s.address,
-                    weight: s.weight,
-                    height: s.height,
-                    isNearsighted: s.is_nearsighted,
-                    isSpecialNeeds: s.is_special_needs,
-                    behaviorRecords: (s.behavior_records || []).map((br: any) => ({
-                        ...br,
-                        timestamp: Number(br.timestamp)
-                    }))
-                }));
-                const withShortNames = calculateShortNames(mappedStudents);
-                setStudents(withShortNames);
+                if (studentsData && !studentsError) {
+                    const mappedStudents: Student[] = studentsData.map((s: any) => ({
+                        id: s.id,
+                        fullName: s.full_name,
+                        shortName: s.short_name || '',
+                        currentSeatAssignedTimestamp: s.current_seat_assigned_timestamp ? Number(s.current_seat_assigned_timestamp) : null,
+                        parentPhone: s.parent_phone,
+                        address: s.address,
+                        weight: s.weight,
+                        height: s.height,
+                        isNearsighted: s.is_nearsighted,
+                        isSpecialNeeds: s.is_special_needs,
+                        behaviorRecords: (s.behavior_records || []).map((br: any) => ({
+                            ...br,
+                            timestamp: Number(br.timestamp)
+                        }))
+                    }));
+                    const withShortNames = calculateShortNames(mappedStudents);
+                    setStudents(withShortNames);
 
-                if (settings && settings.seating_chart && Array.isArray(settings.seating_chart)) {
-                    const freshStudentMap = new Map(withShortNames.map(s => [s.id, s]));
-                    const freshChart = settings.seating_chart.map((row: any) => 
-                        row.map((table: any) => 
-                            table.map((st: any) => freshStudentMap.get(st.id) || st)
-                        )
-                    );
-                    setSeatingChart(freshChart);
+                    if (!settings?.student_list_input && withShortNames.length > 0) {
+                        const fallbackNames = withShortNames.map((s: Student) => s.fullName).join('\n');
+                        setStudentListInput(fallbackNames);
+                        setTimeout(() => saveAppSettings({ student_list_input: fallbackNames }), 500);
+                    }
+
+                    if (settings && settings.seating_chart && Array.isArray(settings.seating_chart)) {
+                        const freshStudentMap = new Map(withShortNames.map(s => [s.id, s]));
+                        const freshChart = settings.seating_chart.map((row: any) => 
+                            row.map((table: any) => 
+                                table.map((st: any) => freshStudentMap.get(st.id) || st)
+                            )
+                        );
+                        setSeatingChart(freshChart);
+                    }
                 }
-            }
         } catch (error) {
             console.error("Unexpected error loading data:", error);
         } finally {
             setIsLoading(false);
         }
     };
+
+    const fetchStudentsSilent = async () => {
+        if (!activeClassId) return;
+        const { data: studentsData } = await supabase
+            .from('students')
+            .select(`id, full_name, short_name, parent_phone, address, weight, height, is_nearsighted, is_special_needs, current_seat_assigned_timestamp, behavior_records (id, type, description, score, timestamp, status, created_by)`)
+            .eq('class_id', activeClassId)
+            .order('full_name');
+
+        if (studentsData) {
+            const mappedStudents: Student[] = studentsData.map((s: any) => ({
+                id: s.id,
+                fullName: s.full_name,
+                shortName: s.short_name || '',
+                currentSeatAssignedTimestamp: s.current_seat_assigned_timestamp ? Number(s.current_seat_assigned_timestamp) : null,
+                parentPhone: s.parent_phone,
+                address: s.address,
+                weight: s.weight,
+                height: s.height,
+                isNearsighted: s.is_nearsighted,
+                isSpecialNeeds: s.is_special_needs,
+                behaviorRecords: (s.behavior_records || []).map((br: any) => ({
+                    ...br,
+                    timestamp: Number(br.timestamp)
+                }))
+            }));
+            const withShortNames = calculateShortNames(mappedStudents);
+            setStudents(withShortNames);
+            setSeatingChart(prev => {
+                if (!prev || prev.length === 0) return prev;
+                const freshMap = new Map(withShortNames.map(s => [s.id, s]));
+                return prev.map(row => row.map(table => table.map(st => freshMap.get(st.id) || st)));
+            });
+        }
+    };
+
     fetchData();
+
+    // Setup Realtime Subscription for behavioral updates across devices
+    const channel = supabase.channel('realtime_behavior')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'behavior_records' }, () => {
+             console.log("Realtime: behavior_records changed!");
+             fetchStudentsSilent();
+        })
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
+
   }, [isLoggedIn, activeClassId]);
 
   // --- Auto-save Effects ---

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import type { SeatingChart, ViewMode, Student, Group, ArrangementMode } from '../../types';
+import type { SeatingChart, ViewMode, Student, Group, ArrangementMode, UserRole } from '../../types';
 import { View2DIcon } from '../../components/common/icons/View2DIcon';
 import { View3DIcon } from '../../components/common/icons/View3DIcon';
 
@@ -53,14 +53,15 @@ const formatDuration = (timestamp: number | null): string => {
 interface SeatingChartDisplayProps {
   seatingChart: SeatingChart;
   viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-  rotation: { x: number; y: number };
-  setRotation: (rotation: { x: number; y: number }) => void;
+  setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>;
+  rotation: { x: number, y: number };
+  setRotation: React.Dispatch<React.SetStateAction<{ x: number, y: number }>>;
   groups: Group[];
   groupLeaders: Map<number, string>;
-  onSetGroupLeader: (groupIndex: number, studentId: string) => void;
+  onSetGroupLeader: (groupId: number, studentId: string) => void;
   arrangementMode: ArrangementMode;
   seatsPerTable: number;
+  userRole: UserRole | null;
 }
 
 const DraggableStudent: React.FC<{ 
@@ -68,14 +69,16 @@ const DraggableStudent: React.FC<{
   isLeader: boolean; 
   onSetLeader: () => void; 
   isManualMode: boolean;
-}> = ({ student, isLeader, onSetLeader, isManualMode }) => {
+  userRole: UserRole | null;
+}> = ({ student, isLeader, onSetLeader, isManualMode, userRole }) => {
+  const isDndDisabled = !isManualMode || userRole?.role !== 'admin';
   const {attributes, listeners, setNodeRef, transform, isDragging} = useDraggable({
     id: `student-${student.id}`,
-    disabled: !isManualMode,
+    disabled: isDndDisabled,
   });
   const { isOver, setNodeRef: setDroppableRef } = useDroppable({
     id: `student-${student.id}`,
-    disabled: !isManualMode,
+    disabled: isDndDisabled,
   });
 
   const style = transform ? {
@@ -144,18 +147,19 @@ const DraggableTable: React.FC<{
     onSetGroupLeader: (groupIndex: number, studentId: string) => void;
     arrangementMode: ArrangementMode;
     seatsPerTable: number;
-}> = ({ students, rowIndex, colIndex, tableNumber, groupIndex, isGroupStart, groupLeaders, onSetGroupLeader, arrangementMode, seatsPerTable }) => {
+    userRole: UserRole | null;
+}> = ({ students, rowIndex, colIndex, tableNumber, groupIndex, isGroupStart, groupLeaders, onSetGroupLeader, arrangementMode, seatsPerTable, userRole }) => {
     
     const isManualMode = arrangementMode === 'manual';
     const id = `table-${rowIndex}-${colIndex}`;
 
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id,
-        disabled: !isManualMode,
+        disabled: !isManualMode || userRole?.role !== 'admin',
     });
     const { isOver, setNodeRef: setDroppableRef } = useDroppable({
         id,
-        disabled: !isManualMode,
+        disabled: !isManualMode || userRole?.role !== 'admin',
     });
     
     const style = transform ? {
@@ -210,6 +214,7 @@ const DraggableTable: React.FC<{
                     isLeader={student.id === leaderId}
                     onSetLeader={() => groupIndex !== null && onSetGroupLeader(groupIndex, student.id)}
                     isManualMode={isManualMode}
+                    userRole={userRole}
                   />
                 ))
             ) : null }
@@ -234,7 +239,10 @@ const groupColors = [
 
 const SeatingChartDisplay: React.FC<SeatingChartDisplayProps> = ({ 
   seatingChart, viewMode, setViewMode, rotation, setRotation,
-  groups, groupLeaders, onSetGroupLeader, arrangementMode, seatsPerTable
+  groups, groupLeaders,  onSetGroupLeader,
+  arrangementMode,
+  seatsPerTable,
+  userRole
 }) => {
   const hasChart = seatingChart.length > 0 && seatingChart[0].length > 0;
   const cols = hasChart ? seatingChart[0].length : 0;
@@ -319,6 +327,7 @@ const SeatingChartDisplay: React.FC<SeatingChartDisplayProps> = ({
                         onSetGroupLeader={onSetGroupLeader}
                         arrangementMode={arrangementMode}
                         seatsPerTable={seatsPerTable}
+                        userRole={userRole}
                     />
                   );
                 })}
