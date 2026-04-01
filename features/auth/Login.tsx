@@ -43,14 +43,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md z-10 border border-slate-200">
         <div className="flex flex-col items-center mb-8">
           <img 
-            src="https://dangkyhoc.com/logo-muong-thanh.png" 
-            alt="Logo THCS Mường Thanh" 
-            className="h-24 w-auto mb-4 object-contain drop-shadow-sm hover:scale-105 transition-transform duration-300"
+            src="https://hethongthongtin.vn/wp-content/uploads/2021/08/logo-bo-giao-duc.png" 
+            alt="Logo THCS Nguyễn Hồng Ánh" 
+            className="w-16 h-16 mx-auto mb-4 object-contain drop-shadow-sm hover:scale-105 transition-transform duration-300"
           />
-          <h1 className="text-xl md:text-2xl font-bold text-indigo-900 text-center uppercase leading-tight">
-            Trường THCS Mường Thanh
-          </h1>
-          <p className="text-indigo-600 font-semibold text-sm mt-1 uppercase tracking-wider">Điện Biên</p>
+          <h2 className="text-xl font-bold text-slate-800">
+            Trường THCS Nguyễn Hồng Ánh
+          </h2>
+          <p className="text-indigo-600 font-semibold text-sm mt-1 uppercase tracking-wider">Đà Nẵng</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -139,9 +139,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </form>
       </div>
       
-      <p className="mt-8 text-xs text-slate-500 font-medium z-10">
-        © 2024 SeatFlow - Sản phẩm dự thi THCS Mường Thanh
-      </p>
+      <div className="relative z-10 text-center mt-10 text-xs text-slate-500 pb-6">
+        © 2024 SeatFlow - Sản phẩm dự thi THCS Nguyễn Hồng Ánh
+      </div>
     </div>
   );
 };

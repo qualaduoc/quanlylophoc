@@ -372,10 +372,10 @@ Trần Thị B..."
           </p>
           
           <p className="font-semibold text-slate-600">
-            {sysSettings?.school_name || 'Trường THCS Mường Thanh'}
+            {sysSettings?.school_name || 'Trường THCS Nguyễn Hồng Ánh'}
           </p>
           <p className="text-slate-500 mb-2">
-            {sysSettings?.address || 'Phường Điện Biên Phủ, Tỉnh Điện Biên'}
+            {sysSettings?.address || 'Hòa Châu, Hòa Vang, Tp. Đà Nẵng'}
           </p>
 
           <p className="font-semibold text-slate-600 mt-3">

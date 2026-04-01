@@ -160,12 +160,12 @@ export default function SystemSettingsModal({ isOpen, onClose, systemSettings, o
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Tên Đơn vị / Trường học</label>
-                <input type="text" value={brandData.school_name} onChange={e => setBrandData({...brandData, school_name: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="THCS Mường Thanh" />
+                <input type="text" value={brandData.school_name} onChange={e => setBrandData({...brandData, school_name: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="THCS Nguyễn Hồng Ánh" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Địa chỉ / Tỉnh thành</label>
-                  <input type="text" value={brandData.address} onChange={e => setBrandData({...brandData, address: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Hà Nội, Việt Nam" />
+                  <input type="text" value={brandData.address} onChange={e => setBrandData({...brandData, address: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Đà Nẵng, Việt Nam" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
