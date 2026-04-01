@@ -1,7 +1,8 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Student, BehaviorRecord, UserRole } from '../../types';
 import { UserIcon } from '../../components/common/icons/UserIcon';
+import { exportStudentsToExcel } from '../../utils/exportUtils';
+import { printStudentReport } from '../../utils/printUtils';
 import { supabase } from '../../supabaseClient';
 
 interface StudentManagerProps {
@@ -266,7 +267,17 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
         {/* Sidebar: List */}
         <div className="w-80 border-r border-slate-200 flex flex-col bg-white h-full flex-shrink-0">
           <div className="p-4 border-b border-slate-200 bg-indigo-50">
-            <h2 className="text-sm font-bold text-indigo-900 mb-3 uppercase tracking-wide">Danh sách học sinh</h2>
+            <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">Danh sách học sinh</h2>
+                <button 
+                   onClick={() => exportStudentsToExcel(filteredStudents, viewMonth, viewYear, '6A1')} // todo: get correct class name
+                   className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-green-700 font-semibold text-xs rounded shadow-sm border border-green-200 hover:bg-green-50 transition-colors" 
+                   title="Xuất báo cáo Excel cho toàn bộ danh sách bên dưới"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
+                    Xuất Excel
+                </button>
+            </div>
             <div className="relative">
                 <input
                 type="text"
@@ -338,11 +349,32 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
                         <p className="text-slate-500 text-sm">Mã học sinh: {selectedStudent.shortName || 'N/A'}</p>
                     </div>
                 </div>
-                {(selectedStudent.isSpecialNeeds || selectedStudent.isNearsighted || (parseInt(selectedStudent.height || '999') < 135)) && (
-                    <div className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full border border-orange-200">
-                        Ưu tiên xếp chỗ
+                <div className="flex items-center gap-4">
+                    {(selectedStudent.isSpecialNeeds || selectedStudent.isNearsighted || (parseInt(selectedStudent.height || '999') < 135)) && (
+                        <div className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full border border-orange-200 self-center hidden sm:block">
+                            Ưu tiên xếp chỗ
+                        </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => exportStudentsToExcel([selectedStudent], viewMonth, viewYear, 'Cá Nhân')} 
+                            className="px-3 py-1.5 flex items-center gap-2 text-sm font-semibold rounded-lg bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors shadow-sm"
+                            title="Xuất Excel cho riêng học sinh này"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
+                            <span className="hidden sm:inline">Xuất Excel</span>
+                        </button>
+                        <button 
+                            onClick={() => printStudentReport(selectedStudent, viewMonth, viewYear, null)} 
+                            className="px-3 py-1.5 flex items-center gap-2 text-sm font-semibold rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors shadow-sm"
+                            title="In nhanh phiếu đánh giá phát cho phụ huynh"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            <span className="hidden sm:inline">In Phiếu</span>
+                        </button>
                     </div>
-                )}
+                </div>
               </div>
 
               {/* Navigation Tabs */}
