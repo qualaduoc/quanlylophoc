@@ -75,8 +75,8 @@ const StudentManagerModal: React.FC<StudentManagerProps> = ({ students, onUpdate
   const getConductRating = (score: number) => {
     if (score >= 90) return { label: 'Tốt', color: 'text-green-600 bg-green-100' };
     if (score >= 70) return { label: 'Khá', color: 'text-blue-600 bg-blue-100' };
-    if (score >= 50) return { label: 'Trung Bình', color: 'text-yellow-600 bg-yellow-100' };
-    return { label: 'Yếu', color: 'text-red-600 bg-red-100' };
+    if (score >= 50) return { label: 'Đạt', color: 'text-yellow-600 bg-yellow-100' };
+    return { label: 'Chưa đạt', color: 'text-red-600 bg-red-100' };
   };
 
   // --- Actions ---
