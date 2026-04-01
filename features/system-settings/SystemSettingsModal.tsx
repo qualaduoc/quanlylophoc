@@ -141,7 +141,7 @@ export default function SystemSettingsModal({ isOpen, onClose, systemSettings, o
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Tên Thương hiệu / App</label>
-                  <input type="text" value={brandData.app_name} onChange={e => setBrandData({...brandData, app_name: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="SeatFlow" />
+                  <input type="text" value={brandData.app_name} onChange={e => setBrandData({...brandData, app_name: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="SmartClass" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Phiên bản</label>

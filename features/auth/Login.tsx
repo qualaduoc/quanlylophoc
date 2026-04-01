@@ -140,7 +140,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       </div>
       
       <div className="relative z-10 text-center mt-10 text-xs text-slate-500 pb-6">
-        © 2024 SeatFlow - Sản phẩm dự thi THCS Nguyễn Hồng Ánh
+        © 2024 SmartClass - Sản phẩm dự thi THCS Nguyễn Hồng Ánh
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, onTabChange, onOpenAdminSett
           </div>
           <div>
             <h1 className="text-lg font-bold text-slate-800 leading-tight" title={sysSettings?.version ? `Phiên bản: ${sysSettings.version}` : undefined}>
-              {sysSettings?.app_name || 'SeatFlow'}
+              {sysSettings?.app_name || 'SmartClass'}
             </h1>
             <p className="text-xs text-slate-500 font-medium">
               {sysSettings?.school_name || 'THCS Nguyễn Hồng Ánh'}

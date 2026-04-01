@@ -21,7 +21,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
         onClick={e => e.stopPropagation()}
       >
         <header className="flex items-center justify-between p-4 border-b border-slate-200 flex-shrink-0">
-          <h2 id="help-modal-title" className="text-xl font-bold text-indigo-600">Hướng Dẫn Sử Dụng SeatFlow</h2>
+          <h2 id="help-modal-title" className="text-xl font-bold text-indigo-600">Hướng Dẫn Sử Dụng SmartClass</h2>
           <button 
             onClick={onClose} 
             className="text-slate-400 hover:text-slate-600"
@@ -53,7 +53,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           </HelpSection>
           
           <HelpSection title="3. Chế Độ Sắp Xếp">
-            <p>SeatFlow có hai chế độ hoạt động chính:</p>
+            <p>SmartClass có hai chế độ hoạt động chính:</p>
             <ul className="list-disc list-inside space-y-1 mt-2 pl-2">
               <li><strong>Tự động:</strong> Sử dụng các nút "Sắp xếp ban đầu" và "Luân chuyển" để ứng dụng tự động xếp chỗ. Ở chế độ này, bạn cũng có thể sử dụng tính năng "Chia Tổ".</li>
               <li><strong>Thủ công:</strong> Cho phép bạn toàn quyền điều chỉnh sơ đồ bằng cách kéo và thả.</li>

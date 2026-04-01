@@ -4,7 +4,7 @@ import { SystemSettingsData } from '../types';
 
 const defaultSettings: SystemSettingsData = {
   id: 1,
-  app_name: 'SeatFlow',
+  app_name: 'SmartClass',
   school_name: 'THCS Nguyễn Hồng Ánh',
   author_name: 'Khầy Được',
   address: 'Việt Nam',
